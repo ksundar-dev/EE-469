@@ -1,0 +1,71 @@
+# Reading C:/intelFPGA_lite/17.0/modelsim_ase/tcl/vsim/pref.tcl
+do runlab.do
+# ** Warning: (vlib-34) Library already exists at "work".
+# Model Technology ModelSim - Intel FPGA Edition vlog 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 11:58:13 on Jul 10,2026
+# vlog -reportprogress 300 -sv FullAdder.sv 
+# -- Compiling module FullAdder
+# 
+# Top level modules:
+# 	FullAdder
+# End time: 11:58:13 on Jul 10,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vlog 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 11:58:14 on Jul 10,2026
+# vlog -reportprogress 300 -sv MUX2to1_1bit.sv 
+# -- Compiling module MUX2to1_1bit
+# 
+# Top level modules:
+# 	MUX2to1_1bit
+# End time: 11:58:14 on Jul 10,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vlog 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 11:58:14 on Jul 10,2026
+# vlog -reportprogress 300 -sv MUX8to1_1bit.sv 
+# -- Compiling module MUX8to1_1bit
+# 
+# Top level modules:
+# 	MUX8to1_1bit
+# End time: 11:58:14 on Jul 10,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vlog 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 11:58:14 on Jul 10,2026
+# vlog -reportprogress 300 -sv alu.sv 
+# -- Compiling module alu
+# 
+# Top level modules:
+# 	alu
+# End time: 11:58:14 on Jul 10,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vlog 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 11:58:14 on Jul 10,2026
+# vlog -reportprogress 300 -sv alustim.sv 
+# -- Compiling module alustim
+# 
+# Top level modules:
+# 	alustim
+# End time: 11:58:14 on Jul 10,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vsim -voptargs="+acc" work.alustim 
+# Start time: 11:58:14 on Jul 10,2026
+# Loading sv_std.std
+# Loading work.alustim
+# Loading work.alu
+# Loading work.FullAdder
+# Loading work.MUX8to1_1bit
+# Loading work.MUX2to1_1bit
+# 0 ps
+# 1 ns
+#    0.00 ns testing PASS_B operations
+# 10000000.00 ns testing addition
+# 10100000.00 ns testing add
+# 20100000.00 ns testing addition edge cases (signed overflow)
+# 20500000.00 ns testing subtraction
+# 30500000.00 ns testing subtraction edge cases
+# 30800000.00 ns testing AND
+# 40800000.00 ns testing OR)
+# 50800000.00 ns testing bitwise XOR
+# 60800000.00 ns testing ops zero/negative edge cases
+write format wave -window .main_pane.wave.interior.cs.body.pw.wf {U:/EE 469/Lab 2/alustim_wave.do}
+# End time: 12:10:30 on Jul 10,2026, Elapsed time: 0:12:16
+# Errors: 0, Warnings: 0
