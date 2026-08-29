@@ -1,0 +1,21 @@
+//Kavin Sundar
+//Lab 5 (Pipelined CPU)
+`timescale 1ps/1ps
+// Detects whether a 5-bit register address equals 31 (5'b11111), i.e.
+// X31. Used by the forwarding logic: X31 is hardwired to 0 in the
+// register file (RegDecoder never builds a write-enable for address 31),
+// so an instruction that targets X31 must never be forwarded as if it
+// actually wrote a nonzero value -- forwarding must fall through to the
+// (always-zero) raw register-file read instead. Plain 5-input AND, built
+// as a 4-input AND followed by a 2-input AND to respect the 4-input gate
+// limit.
+module IsReg31 (is31, r);
+
+	output is31;
+	input  [4:0] r;
+
+	wire and4;
+	and #50 (and4, r[0], r[1], r[2], r[3]);
+	and #50 (is31, and4, r[4]);
+
+endmodule

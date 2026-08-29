@@ -1,0 +1,88 @@
+`timescale 1ps/1ps
+// controlunit.sv
+// Pure control logic (RTL allowed per spec: "the control can be built any
+// way you choose"). Produces narrow (1-3 bit) selector/enable signals that
+// drive the structural datapath muxes/adders/gates in cpu.sv -- this module
+// itself never touches the wide data buses.
+//
+// Standard LEGv8 opcodes (Harris & Harris ARM edition). If your course
+// handout defines different bit patterns, only the constants below need
+// to change -- the rest of the CPU is opcode-agnostic.
+module controlunit (
+	input  logic [31:0] instruction,
+
+	output logic         RegWrite,
+	output logic [1:0]   ALUSrcB,      // 00=ReadData2, 01=SignExtImm9, 10=ZeroExtImm12
+	output logic [2:0]   ALUCntrl,     // matches alu.sv's cntrl encoding
+	output logic         MemRead,
+	output logic         MemWrite,
+	output logic [1:0]   RegWriteSrc,  // 00=ALU result, 01=MemReadData, 10=PC+4
+	output logic         RegDst,       // 0=Rd/Rt field, 1=constant 30 (X30, for BL)
+	output logic         ReadReg2Src,  // 0=Rm field, 1=Rd/Rt field
+	output logic         FlagWrite,
+	output logic         UncondBranch, // B, BL
+	output logic         IsBR,
+	output logic         IsCBZ,
+	output logic         IsBLT,
+	output logic         ImmSelBranch  // 0=SignExtImm19x4, 1=SignExtImm26x4
+	);
+
+	localparam ALU_ADD = 3'b010, ALU_SUB = 3'b011;
+
+	localparam [10:0] OP_ADDS = 11'b10101011000;
+	localparam [10:0] OP_SUBS = 11'b11101011000;
+	localparam [10:0] OP_BR   = 11'b11010110000;
+	localparam [10:0] OP_LDUR = 11'b11111000010;
+	localparam [10:0] OP_STUR = 11'b11111000000;
+	localparam [9:0]  OP_ADDI = 10'b1001000100;
+	localparam [7:0]  OP_CBZ  = 8'b10110100;
+	localparam [7:0]  OP_BCOND= 8'b01010100;
+	localparam [5:0]  OP_B    = 6'b000101;
+	localparam [5:0]  OP_BL   = 6'b100101;
+	localparam [4:0]  COND_LT = 5'b01011;
+
+	always_comb begin
+		// Safe defaults -- avoids inferred latches, and matches "do nothing"
+		// behavior for any instruction that doesn't touch a given resource.
+		RegWrite     = 1'b0;
+		ALUSrcB      = 2'b00;
+		ALUCntrl     = ALU_ADD;
+		MemRead      = 1'b0;
+		MemWrite     = 1'b0;
+		RegWriteSrc  = 2'b00;
+		RegDst       = 1'b0;
+		ReadReg2Src  = 1'b0;
+		FlagWrite    = 1'b0;
+		UncondBranch = 1'b0;
+		IsBR         = 1'b0;
+		IsCBZ        = 1'b0;
+		IsBLT        = 1'b0;
+		ImmSelBranch = 1'b0;
+
+		if (instruction[31:21] == OP_ADDS) begin
+			RegWrite = 1'b1; ALUSrcB = 2'b00; ALUCntrl = ALU_ADD; FlagWrite = 1'b1;
+		end else if (instruction[31:21] == OP_SUBS) begin
+			RegWrite = 1'b1; ALUSrcB = 2'b00; ALUCntrl = ALU_SUB; FlagWrite = 1'b1;
+		end else if (instruction[31:21] == OP_BR) begin
+			IsBR = 1'b1;
+		end else if (instruction[31:21] == OP_LDUR) begin
+			RegWrite = 1'b1; ALUSrcB = 2'b01; ALUCntrl = ALU_ADD;
+			MemRead = 1'b1; RegWriteSrc = 2'b01;
+		end else if (instruction[31:21] == OP_STUR) begin
+			ALUSrcB = 2'b01; ALUCntrl = ALU_ADD;
+			MemWrite = 1'b1; ReadReg2Src = 1'b1;
+		end else if (instruction[31:22] == OP_ADDI) begin
+			RegWrite = 1'b1; ALUSrcB = 2'b10; ALUCntrl = ALU_ADD;
+		end else if (instruction[31:24] == OP_CBZ) begin
+			IsCBZ = 1'b1; ReadReg2Src = 1'b1; ImmSelBranch = 1'b0;
+		end else if (instruction[31:24] == OP_BCOND && instruction[4:0] == COND_LT) begin
+			IsBLT = 1'b1; ImmSelBranch = 1'b0;
+		end else if (instruction[31:26] == OP_B) begin
+			UncondBranch = 1'b1; ImmSelBranch = 1'b1;
+		end else if (instruction[31:26] == OP_BL) begin
+			UncondBranch = 1'b1; ImmSelBranch = 1'b1;
+			RegWrite = 1'b1; RegDst = 1'b1; RegWriteSrc = 2'b10;
+		end
+	end
+
+endmodule

@@ -1,0 +1,19 @@
+`timescale 1ps/1ps
+// Mux4.sv
+// Generic N-bit-wide structural 4:1 mux, built as a 2-level tree of Mux2
+// (same tree construction as MUX8to1_1bit, just 2 levels instead of 3).
+// sel[0] picks within each pair, sel[1] picks the final pair, so in{k}
+// reaches the output whenever sel == k (binary).
+module Mux4 #(parameter WIDTH = 64) (out, in0, in1, in2, in3, sel);
+
+	output [WIDTH-1:0] out;
+	input  [WIDTH-1:0] in0, in1, in2, in3;
+	input  [1:0]        sel;
+
+	wire [WIDTH-1:0] lo, hi;
+
+	Mux2 #(WIDTH) mlo (.out(lo), .a(in0), .b(in1), .sel(sel[0]));
+	Mux2 #(WIDTH) mhi (.out(hi), .a(in2), .b(in3), .sel(sel[0]));
+	Mux2 #(WIDTH) mfin (.out(out), .a(lo), .b(hi), .sel(sel[1]));
+
+endmodule
