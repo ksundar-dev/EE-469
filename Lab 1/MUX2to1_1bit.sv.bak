@@ -1,0 +1,20 @@
+`timescale 1ps/1ps
+//=============================================================
+// MUX2to1_1bit.v
+// out = sel ? b : a
+// Built entirely from basic gates (NOT, AND, OR), each 50ps delay.
+// This is the atomic building block for every larger mux in the
+// design (feedback mux inside REG64, and the 32:1 mux tree).
+//=============================================================
+module MUX2to1_1bit (out, a, b, sel);
+  output out;
+  input  a, b, sel;
+
+  wire nsel, t1, t2;
+
+  not #50 g_inv  (nsel, sel);
+  and #50 g_and1 (t1, a, nsel);
+  and #50 g_and2 (t2, b, sel);
+  or  #50 g_or   (out, t1, t2);
+
+endmodule

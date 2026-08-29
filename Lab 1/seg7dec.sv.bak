@@ -1,0 +1,41 @@
+`timescale 1ps/1ps
+//=============================================================
+// seg7dec.sv
+// Decodes a 4-bit hex nibble to the DE1-SoC's active-LOW
+// 7-segment display encoding. This is board-support / display
+// logic, NOT part of the register file's datapath, so it isn't
+// held to the "no behavioral code" rule that applies to regfile
+// -- Rule 7 in your lab spec draws that same line for control
+// logic starting in labs 3/4 ("the control can be built any way
+// you choose"). If your course already provides a seg7 decoder
+// (common in DE1-SoC starter kits), use that one instead.
+//=============================================================
+module seg7dec (hex, segments);
+  input  [3:0] hex;
+  output [6:0] segments; // {g,f,e,d,c,b,a}, active LOW
+
+  reg [6:0] segments;
+
+  always @(*) begin
+    case (hex)
+      4'h0: segments = 7'b1000000;
+      4'h1: segments = 7'b1111001;
+      4'h2: segments = 7'b0100100;
+      4'h3: segments = 7'b0110000;
+      4'h4: segments = 7'b0011001;
+      4'h5: segments = 7'b0010010;
+      4'h6: segments = 7'b0000010;
+      4'h7: segments = 7'b1111000;
+      4'h8: segments = 7'b0000000;
+      4'h9: segments = 7'b0010000;
+      4'hA: segments = 7'b0001000;
+      4'hB: segments = 7'b0000011;
+      4'hC: segments = 7'b1000110;
+      4'hD: segments = 7'b0100001;
+      4'hE: segments = 7'b0000110;
+      4'hF: segments = 7'b0001110;
+      default: segments = 7'b1111111; // blank
+    endcase
+  end
+
+endmodule

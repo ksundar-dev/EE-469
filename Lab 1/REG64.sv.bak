@@ -1,0 +1,38 @@
+`timescale 1ps/1ps
+//=============================================================
+// REG64.v
+// A 64-bit register with a write-enable, built ONLY from the
+// given D_FF (no enable pin) plus additional gate-level logic.
+//
+// Trick: the D_FF given has no enable pin, so we build "enable"
+// ourselves. In front of every flip-flop's D input we put a
+// 2:1 mux:
+//     we=1  -> feed in the new WriteData bit
+//     we=0  -> feed the flip-flop's OWN output q right back into
+//              itself, so it just re-latches its current value
+//              every clock edge (i.e. appears to hold state)
+//
+// No gates are placed on clk or reset, per the lab's warning.
+//=============================================================
+module REG64 (q, d, we, clk);
+  output [63:0] q;
+  input  [63:0] d;
+  input         we, clk;
+
+  // No reset port on this module -- regstim.sv's instantiation of the
+  // top-level "regfile" does not drive a reset signal, so there is
+  // nothing to plumb down to here. Every D_FF's reset pin is simply
+  // tied to a hardwired constant 0 (never reset). This is safe because
+  // the testbench always writes every register before ever reading it,
+  // so the flip-flops' undefined power-up state is never sampled.
+  wire [63:0] d_mux;
+
+  genvar i;
+  generate
+    for (i = 0; i < 64; i = i + 1) begin : bitslice
+      MUX2to1_1bit fbmux (.out(d_mux[i]), .a(q[i]), .b(d[i]), .sel(we));
+      D_FF          ff   (.q(q[i]), .d(d_mux[i]), .reset(1'b0), .clk(clk));
+    end
+  endgenerate
+
+endmodule

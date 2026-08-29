@@ -1,0 +1,72 @@
+`timescale 1ps/1ps
+//=============================================================
+// RegisterFile.v
+// Top-level 32 x 64 ARM register file.
+//
+// - 31 real REG64 registers (X0..X30)
+// - X31 hardwired to 64'b0 (assign to a constant -- explicitly
+//   permitted by Rule #2)
+// - RegDecoder produces one write-enable line per real register
+// - Two 64-bit-wide 32:1 muxes (built as 64 instances each of
+//   MUX32to1_1bit, one per output bit) drive ReadData1/ReadData2
+//=============================================================
+// NOTE: module name and port list (names, not order -- regstim.sv
+// connects by name, e.g. ".ReadData1") are matched EXACTLY to
+// regstim.sv's instantiation: "regfile dut (.ReadData1, .ReadData2,
+// .WriteData, .ReadRegister1, .ReadRegister2, .WriteRegister,
+// .RegWrite, .clk);" -- 8 signals, no reset.
+module regfile (
+    ReadData1, ReadData2,
+    ReadRegister1, ReadRegister2, WriteRegister,
+    WriteData, RegWrite, clk
+);
+  output [63:0] ReadData1;
+  output [63:0] ReadData2;
+
+  input  [4:0]  ReadRegister1;
+  input  [4:0]  ReadRegister2;
+  input  [4:0]  WriteRegister;
+  input  [63:0] WriteData;
+  input         RegWrite;
+  input         clk;
+
+  // One 64-bit wire bus per register (0..31)
+  wire [63:0] regout [0:31];
+
+  // Per-register write enables (0..30); X31 needs none
+  wire [30:0] we;
+
+  RegDecoder dec (.we(we), .addr(WriteRegister), .regwrite(RegWrite));
+
+  genvar r;
+  generate
+    for (r = 0; r < 31; r = r + 1) begin : regs
+      REG64 reg_i (
+        .q(regout[r]),
+        .d(WriteData),
+        .we(we[r]),
+        .clk(clk)
+      );
+    end
+  endgenerate
+
+  // X31 hardwired to zero -- constant assign, explicitly allowed
+  assign regout[31] = 64'b0;
+
+  // Build the two 64-bit-wide 32:1 muxes, one output bit at a time.
+  // For each bit position b, gather bit b from all 32 registers
+  // into a 32-bit "column" (pure wire connects), then feed that
+  // column into a single-bit 32:1 mux.
+  genvar b, j;
+  generate
+    for (b = 0; b < 64; b = b + 1) begin : cols
+      wire [31:0] col;
+      for (j = 0; j < 32; j = j + 1) begin : gather
+        assign col[j] = regout[j][b];
+      end
+      MUX32to1_1bit rd1 (.out(ReadData1[b]), .in(col), .sel(ReadRegister1));
+      MUX32to1_1bit rd2 (.out(ReadData2[b]), .in(col), .sel(ReadRegister2));
+    end
+  endgenerate
+
+endmodule
