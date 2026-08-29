@@ -1,0 +1,91 @@
+Pipelined LEGv8 CPU
+
+A 64-bit ARM (LEGv8) CPU, built from the ground up in structural, gate-level SystemVerilog: every wide datapath signal is wired from explicit and/or/ xor/not gates (max 4 inputs each, 50ps delay each), and every state-holding element is built from a single given D_FF primitive. This repo is the fourth and final stage of a four-project sequence:
+
+Project	What it added
+1 — Register File	32×64-bit register file, gate-level, structural
+2 — ALU	64-bit ALU: add, sub, and, or, xor, plus flags
+3 — Single-Cycle CPU	Full LEGv8 datapath, one instruction per clock
+4 — Pipelined CPU	5-stage pipeline, forwarding, branch resolution (this repo)
+What the CPU does
+
+Implements the LEGv8 instruction set: ADDI, ADDS, SUBS, AND, ORR, EOR, LDUR, STUR, B, B.LT, BL, BR, CBZ. It fetches, decodes, executes, accesses memory, and writes back one instruction per clock cycle in steady state, five instructions in flight simultaneously.
+
+Architecture: 5 pipeline stages
+IF  ->  ID  ->  EX  ->  MEM  ->  WB
+fetch   decode  ALU    memory   register
+                        access   write-back
+
+Each stage is separated by a pipeline register (a bank of D_FFs, built via the reusable PipeReg module), which latches everything the next stage needs so a new instruction can enter the pipeline every single cycle.
+
+Branch resolution happens in ID, one stage earlier than a "textbook" design. B, B.LT, BL, BR, and CBZ are all fully decided by the end of the Decode stage — using forwarded register/flag values (see below) — so the very next fetch after a branch is already correctly redirected. This means the design needs no flush or squash logic anywhere: the one guaranteed delay-slot instruction (per the course's ISA rules) is always the correct next instruction to execute, with no extra "shadow" fetch to throw away.
+
+Hazards and how they're handled
+
+Pipelining creates a real problem that doesn't exist in a single-cycle design: an instruction can need a value that a still-in-flight earlier instruction hasn't officially saved to the register file yet.
+
+Data forwarding
+
+ForwardSelect (one instance per register-file read port) checks three candidate sources every cycle — whatever's currently in EX, MEM, and WB — against the register number ID is about to read:
+
+EX tap — the immediately preceding instruction (0 cycles of gap)
+MEM tap — two instructions back
+WB tap — three instructions back (the exact cycle a register is being both read in ID and written in WB simultaneously; the register file's read is purely combinational and can't see a same-edge write, so this tap exists specifically to close that gap)
+
+RegMatch does the register-number comparison (5-bit XNOR-then-AND, same technique the ALU itself uses internally). IsReg31 excludes any candidate whose destination is X31 — a "write" there is architecturally a no-op, and since forwarding bypasses the register file entirely, an unguarded forward would hand a consumer the wrong nonzero value. ForwardMux then picks the freshest applicable candidate (EX > MEM > WB > raw register-file read).
+
+The EX tap is explicitly disabled for a pending load (nMemRead_EX): a LDUR sitting in EX has only computed a memory address so far, not the loaded data (that arrives one stage later, in MEM). The course's mandatory one-instruction load delay slot guarantees no valid program ever needs this path — the gate exists as defense-in-depth, not as something the design relies on.
+
+Flag forwarding
+
+B.LT doesn't read a register — it reads the negative/overflow flags from the most recent ADDS/SUBS. Since SUBS can be immediately followed by B.LT (and the real course benchmarks do exactly this, back-to-back), a single 2:1 mux picks between the stored FlagsReg output and the live EX-stage ALU flags, selected by whether EX currently holds a flag-setting instruction. Same underlying idea as register forwarding, applied to a 2-bit resource instead of a 64-bit one.
+
+What changed from the single-cycle CPU (Lab 3 → Lab 4)
+
+Unchanged, byte-for-byte: regfile.sv, alu.sv, controlunit.sv, ImmGen.sv, datamem.sv, instructmem.sv, Mux2.sv, Mux4.sv, FlagsReg.sv, IsZero64.sv. Pipelining changes when a value is used, not what any single combinational block computes.
+
+New files, all specific to pipelining:
+
+File	Purpose
+PipeReg.sv	Parameterized bank of D_FFs — the pipeline register building block
+RegMatch.sv	5-bit register-number equality check
+IsReg31.sv	Detects a destination of X31
+ForwardMux.sv	Priority mux: raw value vs. up to 3 forwarded candidates
+ForwardSelect.sv	Wires RegMatch+IsReg31 into a forwarding decision per read port
+
+cpu.sv was restructured from one flat combinational block into five labeled sections joined by PipeReg instances, with the forwarding network inserted right after the register file's read outputs — everything downstream (the ALU, the branch-decision logic, STUR's store-data) reads the forwarded values, never the register file's raw output directly.
+
+A real bug found and fixed along the way
+
+Testing against the recursive test12_Fibonacci benchmark exposed that BR's target register is encoded in the Rd/Rt field (instruction[4:0]), not the Rn field (instruction[9:5]) every other instruction uses. BR now correctly reads its target via the same ReadRegister2/ReadReg2Src path already used for STUR's store-data and CBZ's zero-check register.
+
+Verification
+
+Tested against all 9 provided course benchmarks — every final register and memory value checked against each file's own documented expected results (several of which explicitly differ between single-cycle and pipelined execution, e.g. delay-slot counters):
+
+Benchmark	Exercises
+test01_AddiB	ADDI, unconditional B
+test02_AddsSubs	ADDS/SUBS chains, adjacent-instruction hazards
+test03_CbzB	CBZ, multiple branch types, delay-slot counting
+test04_LdurStur	LDUR/STUR round-trip
+test05_Blt	Back-to-back SUBS→B.LT (flag forwarding)
+test06_BlBr	BL/BR subroutine call and return
+test10_forwarding	Purpose-built hazard stress test
+test11_Sort	Bubble sort — sustained loop execution
+test12_Fibonacci	Recursive BL/BR, deepest hazard coverage
+
+All nine pass with zero assertion failures.
+
+Building and running
+
+Simulated with Icarus Verilog and viewed with GTKWave, driven by the included Makefile:
+
+bash
+make compile   # build sim.out from all sources
+make run       # simulate; prints the same pass/fail trace as ModelSim
+make wave      # open the resulting waveform in GTKWave
+make clean     # remove build products
+
+instructmem.sv's `define BENCHMARK line selects which .arm test program gets loaded; its path is resolved relative to wherever you invoke make/vvp from, so keep a benchmarks/ folder one level above this project's directory (or point the define at a same-directory filename instead).
+
+Also runs in ModelSim via runlab.do / cpu_wave.do, which set up a wave window showing the PC, all 32 registers, data memory, flags, clock, and reset.
