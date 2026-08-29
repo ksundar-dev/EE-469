@@ -1,0 +1,37 @@
+//Kavin Sundar 7/2
+// Lab 1
+`timescale 1ps/1ps
+// Selects 1 of 32 single-bit inputs based on a 5-bit select.
+// 32 -> 16 -> 8 -> 4 -> 2 -> 1
+// THE LAB SAID TO build this ONE 1-bit-wide 32:1 mux, then
+// uses RegisterFile to instantiate 64 copies of it (one  data bit per/build a 64-bit-wide 32:1 mux)
+module MUX32to1_1bit (out, in, sel);
+	output       out;
+	input [31:0] in;
+	input [4:0]  sel;
+
+	wire [15:0] level1;
+	wire [7:0]  level2;
+	wire [3:0]  level3;
+	wire [1:0]  level4;
+	
+	//Send to smaller muxs (16 to 8 to 4 to 2)
+	genvar i;
+	generate
+		for (i = 0; i < 16; i = i + 1) begin : L1
+			MUX2to1_1bit m (.out(level1[i]), .a(in[2*i]), .b(in[2*i+1]), .sel(sel[0]));
+		end
+		for (i = 0; i < 8; i = i + 1) begin : L2
+			MUX2to1_1bit m (.out(level2[i]), .a(level1[2*i]), .b(level1[2*i+1]), .sel(sel[1]));
+		end
+		for (i = 0; i < 4; i = i + 1) begin : L3
+			MUX2to1_1bit m (.out(level3[i]), .a(level2[2*i]), .b(level2[2*i+1]), .sel(sel[2]));
+		end
+		for (i = 0; i < 2; i = i + 1) begin : L4
+			MUX2to1_1bit m (.out(level4[i]), .a(level3[2*i]), .b(level3[2*i+1]), .sel(sel[3]));
+		end
+	endgenerate
+	//final mux
+	MUX2to1_1bit final_mux (.out(out), .a(level4[0]), .b(level4[1]), .sel(sel[4]));
+
+endmodule

@@ -1,0 +1,22 @@
+`timescale 1ps/1ps
+// PCReg.sv
+// The Program Counter. Unlike REG64 (which conditionally re-latches its own
+// value when we=0), the PC always takes a new value every clock -- a
+// single-cycle CPU advances the PC on every cycle, so no write-enable/
+// feedback-mux is needed here, just 64 D_FFs with a real reset input
+// (so the CPU starts executing at address 0).
+module PCReg (q, d, reset, clk);
+
+	output [63:0] q;
+	input  [63:0] d;
+	input         reset;
+	input         clk;
+
+	genvar i;
+	generate
+		for (i = 0; i < 64; i = i + 1) begin : BITS
+			D_FF ff (.q(q[i]), .d(d[i]), .reset(reset), .clk(clk));
+		end
+	endgenerate
+
+endmodule

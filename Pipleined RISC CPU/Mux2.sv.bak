@@ -1,0 +1,21 @@
+`timescale 1ps/1ps
+// Mux2.sv
+// Generic N-bit-wide structural 2:1 mux, built from WIDTH copies of
+// MUX2to1_1bit via generate. Parameterized width is a synthesis-time
+// constant (fixed hardware once WIDTH is set), not behavioral logic --
+// the actual gates underneath are the same MUX2to1_1bit primitives used
+// throughout the register file and ALU.
+module Mux2 #(parameter WIDTH = 64) (out, a, b, sel);
+
+	output [WIDTH-1:0] out;
+	input  [WIDTH-1:0] a, b;
+	input               sel;
+
+	genvar i;
+	generate
+		for (i = 0; i < WIDTH; i = i + 1) begin : BITS
+			MUX2to1_1bit m (.out(out[i]), .a(a[i]), .b(b[i]), .sel(sel));
+		end
+	endgenerate
+
+endmodule

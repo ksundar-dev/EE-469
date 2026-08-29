@@ -1,0 +1,28 @@
+`timescale 1ps/1ps
+// IsZero64.sv
+// Standalone 64-bit "is this value all zero" detector, used by CBZ to test
+// a register directly (without routing it through the ALU). Same 3-level
+// 4-input-OR-tree-then-invert technique as the ALU's internal zero flag.
+module IsZero64 (out, in);
+
+	output out;
+	input  [63:0] in;
+
+	wire [15:0] orA;
+	wire [3:0]  orB;
+	wire        orC;
+
+	genvar i;
+	generate
+		for (i = 0; i < 16; i = i + 1) begin : STAGE_A
+			or #50 (orA[i], in[4*i], in[4*i+1], in[4*i+2], in[4*i+3]);
+		end
+		for (i = 0; i < 4; i = i + 1) begin : STAGE_B
+			or #50 (orB[i], orA[4*i], orA[4*i+1], orA[4*i+2], orA[4*i+3]);
+		end
+	endgenerate
+
+	or  #50 (orC, orB[0], orB[1], orB[2], orB[3]);
+	not #50 (out, orC);
+
+endmodule
