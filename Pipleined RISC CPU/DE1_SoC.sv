@@ -34,16 +34,20 @@ module DE1_SoC (CLOCK_50, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, KEY, LEDR, SW);
 	*/
 	//SET UP FSMS ETC
 	// Wire up ALU	
-	logic  [63:0] A, B;
+	//logic  [63:0] A, B;
+	logic clk;
+	assign clk = CLOCK_50;
+	logic  [63:0] PC_out;
 	logic  [2:0]  cntrl;
 	logic  [63:0] result;
 	logic         negative, zero, overflow, carry_out;
  
 	assign cntrl = SW[2:0];
-	assign A     = {60'b0, SW[6:3]};
-	assign B     = {61'b0, SW[9:7]};
+	//assign A     = {60'b0, SW[6:3]};
+	//assign B     = {61'b0, SW[9:7]};
+	assign reset = SW[9];
  
-	alu alurun(.*);
+	cpu cpurun(.*);
 	
 	
 

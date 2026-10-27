@@ -50,20 +50,19 @@ module datamem (
 	end
 	
 	// Handle the reads.
-	integer i;
+	//integer i;
 	always_comb begin
 		read_data = 'x;
 		if (read_enable == 1)
-			for(i=0; i<xfer_size; i++)
-				read_data[8*i+7 -: 8] = mem[aligned_address + i]; // 8*i+7 -: 8 means "start at 8*i+7, for 8 bits total"
+			for(int i=0; i<8; i++)
+				if (i < xfer_size) read_data[8*i+7 -: 8] = mem[aligned_address + i]; // 8*i+7 -: 8 means "start at 8*i+7, for 8 bits total"
 	end
 	
 	// Handle the writes.
-	integer j;
 	always_ff @(posedge clk) begin
 		if (write_enable)
-			for(j=0; j<xfer_size; j++)
-				mem[aligned_address + j] <= write_data[8*j+7 -: 8]; 
+			for(int j=0; j<8; j++)
+				if (j <xfer_size) mem[aligned_address + j] <= write_data[8*j+7 -: 8]; 
 	end
 endmodule
 
